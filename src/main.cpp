@@ -94,12 +94,49 @@ int main() {
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
-          *
+          * auto vars = mpc.Solve(state, coeffs);
           * Both are in between [-1, 1].
           *
           */
-          double steer_value;
-          double throttle_value;
+		  // The polynomial is fitted to a 3rd order polynomial 
+		  //Eigen::Map<Eigen::VectorXd> ptsxEigen(ptsx);
+		  //Eigen::Map<Eigen::VectorXd> ptsyEigen(ptsy);
+		  Eigen::VectorXd ptsxEg(ptsx.data());
+		  Eigen::VectorXd ptsyEg(ptsy.data());
+		  auto coeffs = polyfit(ptsxEg,ptsyEg, 3);
+		  // The cross track error is calculated by evaluating at polynomial at x, f(x)
+		  // and subtracting y.
+		  double cte = polyeval(coeffs, px) - py;
+		  // Due to the sign starting at 0, the orientation error is -f'(x).
+		  // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
+		  double epsi = psi - atan(coeffs[1] + coeffs[2]*2*px + coeffs[3]*3*px*px);
+		  
+		   Eigen::VectorXd state(6);
+		  state << px, py, psi, v, cte, epsi;
+
+		  std::vector<double> x_vals = {state[0]};
+		  std::vector<double> y_vals = {state[1]};
+		  std::vector<double> psi_vals = {state[2]};
+		  std::vector<double> v_vals = {state[3]};
+		  std::vector<double> cte_vals = {state[4]};
+		  std::vector<double> epsi_vals = {state[5]};
+		  std::vector<double> delta_vals = {};
+		  std::vector<double> a_vals = {};
+		  
+		 auto vars = mpc.Solve(state, coeffs);
+
+		x_vals.push_back(vars[0]);
+		y_vals.push_back(vars[1]);
+		psi_vals.push_back(vars[2]);
+		v_vals.push_back(vars[3]);
+		cte_vals.push_back(vars[4]);
+		epsi_vals.push_back(vars[5]);
+
+		delta_vals.push_back(vars[6]);
+		a_vals.push_back(vars[7]);
+		  
+          double steer_value = vars[6]/deg2rad(25);
+          double throttle_value = vars[7];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
