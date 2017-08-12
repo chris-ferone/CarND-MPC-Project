@@ -91,6 +91,8 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+		  
+		  cout << "before Eigen declaration" << endl;
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -103,14 +105,14 @@ int main() {
 		  double* ptry = &ptsy[0];
 		  Eigen::Map<Eigen::VectorXd> ptsxEigen(ptrx);
 		  Eigen::Map<Eigen::VectorXd> ptsyEigen(ptry); */
-		  Eigen::VectorXd xvals;
-		  Eigen::VectorXd yvals;
-		  
-		  for (int i=0; i < ptsx.size(); i++){
-			xvals[i] = ptsx [i];
-			yvals[i] = ptsy [i];
+		  Eigen::VectorXd xvals(6);
+		  Eigen::VectorXd yvals(6);
+		  cout << "after Eigen declaration" << ptsx.size() << endl;
+		  for (int i=0; i < 6; i++){
+			xvals(i)= ptsx[i];
+			yvals(i) = ptsy[i];
 		  }
-		  
+		  cout << "after for loop" << endl;
 		  //Eigen::VectorXd ptsxEg(ptsx.data());
 		  ///Eigen::VectorXd ptsyEg(ptsy.data());
 		  auto coeffs = polyfit(xvals,yvals, 3);
@@ -120,6 +122,8 @@ int main() {
 		  // Due to the sign starting at 0, the orientation error is -f'(x).
 		  // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
 		  double epsi = psi - atan(coeffs[1] + coeffs[2]*2*px + coeffs[3]*3*px*px);
+		  
+		  cout << "after polyfit/eval" << endl;
 		  
 		   Eigen::VectorXd state(6);
 		  state << px, py, psi, v, cte, epsi;
@@ -132,10 +136,12 @@ int main() {
 		  std::vector<double> epsi_vals = {state[5]};
 		  std::vector<double> delta_vals = {};
 		  std::vector<double> a_vals = {};
-		  
+		  cout << "before MPC solve" << endl;
 		 auto vars = mpc.Solve(state, coeffs);
-
+		cout << "after MPC solve" << endl;
+		cout << "vars[0] " << vars[0] << endl;
 		x_vals.push_back(vars[0]);
+		cout << "after first push back" << endl;
 		y_vals.push_back(vars[1]);
 		psi_vals.push_back(vars[2]);
 		v_vals.push_back(vars[3]);
@@ -144,10 +150,10 @@ int main() {
 
 		delta_vals.push_back(vars[6]);
 		a_vals.push_back(vars[7]);
-		  
+		 	cout << "before steering and throttle command " << endl; 
           double steer_value = vars[6]/deg2rad(25);
           double throttle_value = vars[7];
-
+		cout << "after steering and throttle command " << endl;
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
