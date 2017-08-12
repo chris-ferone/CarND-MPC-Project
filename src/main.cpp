@@ -99,11 +99,21 @@ int main() {
           *
           */
 		  // The polynomial is fitted to a 3rd order polynomial 
-		  //Eigen::Map<Eigen::VectorXd> ptsxEigen(ptsx);
-		  //Eigen::Map<Eigen::VectorXd> ptsyEigen(ptsy);
-		  Eigen::VectorXd ptsxEg(ptsx.data());
-		  Eigen::VectorXd ptsyEg(ptsy.data());
-		  auto coeffs = polyfit(ptsxEg,ptsyEg, 3);
+		 /*  double* ptrx = &ptsx[0];
+		  double* ptry = &ptsy[0];
+		  Eigen::Map<Eigen::VectorXd> ptsxEigen(ptrx);
+		  Eigen::Map<Eigen::VectorXd> ptsyEigen(ptry); */
+		  Eigen::VectorXd xvals;
+		  Eigen::VectorXd yvals;
+		  
+		  for (int i=0; i < ptsx.size(); i++){
+			xvals[i] = ptsx [i];
+			yvals[i] = ptsy [i];
+		  }
+		  
+		  //Eigen::VectorXd ptsxEg(ptsx.data());
+		  ///Eigen::VectorXd ptsyEg(ptsy.data());
+		  auto coeffs = polyfit(xvals,yvals, 3);
 		  // The cross track error is calculated by evaluating at polynomial at x, f(x)
 		  // and subtracting y.
 		  double cte = polyeval(coeffs, px) - py;
