@@ -114,7 +114,7 @@ int main() {
 		  }
 		 // cout << "after for loop" << endl;
 		  //Eigen::VectorXd ptsxEg(ptsx.data());
-		  ///Eigen::VectorXd ptsyEg(ptsy.data());
+		  //Eigen::VectorXd ptsyEg(ptsy.data());
 		  auto coeffs = polyfit(xvals,yvals, 3);
 		  // The cross track error is calculated by evaluating at polynomial at x, f(x)
 		  // and subtracting y.
@@ -171,11 +171,22 @@ int main() {
 
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
-
+		  
+		  vector<double> x_ptrd;
+		  vector<double> y_ptrd;
+		  //cout << "tset" << endl;
+		  for (unsigned int i=0; i<ptsx.size(); i++){
+			  //cout << "here" << endl;
+			  x_ptrd.push_back((ptsx[i] - px) * cos(psi) + (ptsy[i] - py) * sin(psi));
+			  // << "or here" << endl;
+			  y_ptrd.push_back((ptsy[i] - py) * cos(psi) - (ptsx[i] - px) * sin(psi));
+			  //cout << "or here3" << endl;
+		  }
+		  //cout << "tse2t" << endl;
           //Display the waypoints/reference line
-          vector<double> next_x_vals = ptsx;
-          vector<double> next_y_vals = ptsy;
-
+          vector<double> next_x_vals = x_ptrd; //{0.0, 1.0, 2.0, 3.0, 5.0, 10.0};// x_ptr;			//ptsx;
+          vector<double> next_y_vals = y_ptrd; //{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; //y_ptr;	//ptsy;
+			//cout << "ts3et" << endl;
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
 
