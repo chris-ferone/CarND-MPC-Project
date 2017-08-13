@@ -77,7 +77,7 @@ int main() {
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
     string sdata = string(data).substr(0, length);
-    cout << sdata << endl;
+    //cout << sdata << endl;
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
       string s = hasData(sdata);
       if (s != "") {
@@ -90,9 +90,23 @@ int main() {
           double px = j[1]["x"];
           double py = j[1]["y"];
           double psi = j[1]["psi"];
-          double v = j[1]["speed"];
+          double v = j[1]["speed"]; 
+		  double delta = j[1]["steering_angle"]; 
+		  double acceleration = j[1]["throttle"];
 		  
-		  //cout << "before Eigen declaration" << endl;
+		  delta = delta *-1; //  In the simulator, "left" is negative and "right" is positive, while psi is measured the other way around, i.e. "left" is negative (angles are measured counter-clockwise). 
+		  
+		  v=v*0.44704;  //convert speed from MPH to mps
+		  
+		  // predict state in 100ms
+			double latency = 0.1; 
+			const double Lf = 2.67;
+			psi = psi + v*delta/Lf*latency; //predict psi first because it is used in subsequent equations
+			px = px + v*cos(psi)*latency;
+			py = py + v*sin(psi)*latency;
+			v = v + acceleration*latency;
+		  
+		  
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -101,13 +115,18 @@ int main() {
           */
 		  // The polynomial is fitted to a 3rd order polynomial 
 	
+	
+	
 		  /* 		convert x and y waypoints from std::vector to Eigen::VectorXd			*/
 		  Eigen::VectorXd ptsxEigen(ptsx.size());
 		  Eigen::VectorXd ptsyEigen(ptsx.size());
-		  for (int i=0; i < ptsx.size(); i++){
+		  for (unsigned int i=0; i < ptsx.size(); i++){
 			ptsxEigen(i)= ptsx[i];
 			ptsyEigen(i) = ptsy[i];
 		  }
+	
+	
+	
 	
 		  /*      find coeffificents of curve that vehicle should be following              */	
 		  auto coeffs = polyfit(ptsxEigen,ptsyEigen, 3);
@@ -119,8 +138,12 @@ int main() {
 		  double epsi = psi - pi() - atan(coeffs[1] + coeffs[2]*2*px + coeffs[3]*3*px*px);
 		  
 		  //cout << endl;
-		  //cout << "epsi " << epsi << " psi " << psi  << endl;
+		  cout << "epsi " << epsi << " |   cte " << cte  << endl;
 		  //cout << endl;
+		  
+		  //predict state into future based on latency
+		  
+		  
 		  
 		  Eigen::VectorXd state(6);
 		  state << px, py, psi, v, cte, epsi;
@@ -146,20 +169,31 @@ int main() {
 		delta_vals.push_back(vars[6]);
 		a_vals.push_back(vars[7]);
 	
-          double steer_value = vars[6]/deg2rad(25)*-1;
+          double steer_value = vars[6]/deg2rad(25)*-1; //multiply the steering value by -1 before sending it back to the server.
           double throttle_value = vars[7];
-		  cout << "throttle" << throttle_value << endl;
+		  //cout << "throttle" << throttle_value << endl;
 	
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;
-
+			
+			
+		 //convert from map coordinates to local car coordinates
+		  vector<double> x_vals_local;
+		  vector<double> y_vals_local;
+		  for (unsigned int i=0; i<ptsx.size(); i++){
+			  x_vals_local.push_back((x_vals[i] - px) * cos(psi) + (y_vals[i] - py) * sin(psi));
+			  y_vals_local.push_back((y_vals[i] - py) * cos(psi) - (x_vals[i] - px) * sin(psi));
+		  }
+			
           //Display the MPC predicted trajectory 
-          vector<double> mpc_x_vals = x_vals;
-          vector<double> mpc_y_vals = y_vals;
-
+          vector<double> mpc_x_vals = x_vals_local;
+          vector<double> mpc_y_vals = y_vals_local;
+		  
+		  cout << "x_vals" << x_vals[0] << "ptsx" << ptsx[0] << endl;
+	
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
 
@@ -187,7 +221,7 @@ int main() {
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
 		  
-          std::cout << msg << std::endl;
+          //std::cout << msg << std::endl;
 		  
           // Latency
           // The purpose is to mimic real driving conditions where
