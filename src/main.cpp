@@ -98,15 +98,16 @@ int main() {
 		  
 		  v=v*0.44704;  //convert speed from MPH to mps
 		  
-		  // predict state in 100ms
-			double latency = 0.1; 
-			const double Lf = 2.67;
-			psi = psi + v*delta/Lf*latency; //predict psi first because it is used in subsequent equations
-			px = px + v*cos(psi)*latency;
-			py = py + v*sin(psi)*latency;
-			v = v + acceleration*latency;
+ 	
+				
 		  
-		  
+		  // tranform way points from map points to local vehicle coordinates
+		  vector<double> ptsx_local;
+		  vector<double> ptsy_local;
+		  for (unsigned int i=0; i<ptsx.size(); i++){
+			  ptsx_local.push_back((ptsx[i] - px) * cos(psi) + (ptsy[i] - py) * sin(psi));
+			  ptsy_local.push_back((ptsy[i] - py) * cos(psi) - (ptsx[i] - px) * sin(psi));
+		  }
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -121,8 +122,8 @@ int main() {
 		  Eigen::VectorXd ptsxEigen(ptsx.size());
 		  Eigen::VectorXd ptsyEigen(ptsx.size());
 		  for (unsigned int i=0; i < ptsx.size(); i++){
-			ptsxEigen(i)= ptsx[i];
-			ptsyEigen(i) = ptsy[i];
+			ptsxEigen(i)= ptsx_local[i];
+			ptsyEigen(i) = ptsy_local[i];
 		  }
 	
 	
@@ -131,22 +132,29 @@ int main() {
 		  /*      find coeffificents of curve that vehicle should be following              */	
 		  auto coeffs = polyfit(ptsxEigen,ptsyEigen, 3);
 		  
+		  // predict state in 100ms
+		double latency = 0.1; 
+		const double Lf = 2.67;
+		psi = v*delta/Lf*latency; //predict psi first because it is used in subsequent equations
+		px = v*latency;
+		//py = v*sin(psi)*latency;
+		v = v + acceleration*latency; 
+		  
 		  /*      Calculate Errors              */
-		  // The cross track error is calculated by evaluating at polynomial at x, f(x)
-		  // and subtracting y.
-		  double cte = polyeval(coeffs, px) - py;
-		  double epsi = psi - pi() - atan(coeffs[1] + coeffs[2]*2*px + coeffs[3]*3*px*px);
+		  // The cross track error is calculated by evaluating at polynomial at x
+		  double cte = polyeval(coeffs, px);
+		  double epsi = -atan(coeffs[1] + coeffs[2]*2*px + coeffs[3]*3*px*px);
 		  
 		  //cout << endl;
-		  cout << "epsi " << epsi << " |   cte " << cte  << endl;
+		  cout  << "|   epsi " << epsi << " |   cte " << cte  << endl;  //<< "psi " << psi
 		  //cout << endl;
 		  
-		  //predict state into future based on latency
+		  
 		  
 		  
 		  
 		  Eigen::VectorXd state(6);
-		  state << px, py, psi, v, cte, epsi;
+		  state << px, 0, psi, v, cte, epsi;
 
 		  std::vector<double> x_vals = {state[0]};
 		  std::vector<double> y_vals = {state[1]};
@@ -180,19 +188,19 @@ int main() {
           msgJson["throttle"] = throttle_value;
 			
 			
-		 //convert from map coordinates to local car coordinates
+/* 		 //convert from map coordinates to local car coordinates
 		  vector<double> x_vals_local;
 		  vector<double> y_vals_local;
 		  for (unsigned int i=0; i<ptsx.size(); i++){
 			  x_vals_local.push_back((x_vals[i] - px) * cos(psi) + (y_vals[i] - py) * sin(psi));
 			  y_vals_local.push_back((y_vals[i] - py) * cos(psi) - (x_vals[i] - px) * sin(psi));
-		  }
+		  } */
 			
           //Display the MPC predicted trajectory 
-          vector<double> mpc_x_vals = x_vals_local;
-          vector<double> mpc_y_vals = y_vals_local;
+          vector<double> mpc_x_vals = x_vals;
+          vector<double> mpc_y_vals = y_vals;
 		  
-		  cout << "x_vals" << x_vals[0] << "ptsx" << ptsx[0] << endl;
+		  //cout << "x_vals" << x_vals[0] << "ptsx" << ptsx[0] << endl;
 	
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -200,17 +208,17 @@ int main() {
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
 		  
-		  //convert from map coordinates to local car coordinates
+/* 		  //convert from map coordinates to local car coordinates
 		  vector<double> x_ptrd;
 		  vector<double> y_ptrd;
 		  for (unsigned int i=0; i<ptsx.size(); i++){
 			  x_ptrd.push_back((ptsx[i] - px) * cos(psi) + (ptsy[i] - py) * sin(psi));
 			  y_ptrd.push_back((ptsy[i] - py) * cos(psi) - (ptsx[i] - px) * sin(psi));
-		  }
+		  } */
 		  
           //Display the waypoints/reference line
-          vector<double> next_x_vals = x_ptrd; 
-          vector<double> next_y_vals = y_ptrd; 
+          vector<double> next_x_vals = ptsx_local; 
+          vector<double> next_y_vals = ptsy_local; 
 		  
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
