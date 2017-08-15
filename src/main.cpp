@@ -136,14 +136,14 @@ int main() {
 		double latency = 0.1; 
 		const double Lf = 2.67;
 		psi = v*delta/Lf*latency; //predict psi first because it is used in subsequent equations
-		px = v*latency;
-		//py = v*sin(psi)*latency;
+		px = v*cos(psi)*latency;
+		py = v*sin(psi)*latency;
 		v = v + acceleration*latency; 
 		  
 		  /*      Calculate Errors              */
 		  // The cross track error is calculated by evaluating at polynomial at x
 		  double cte = polyeval(coeffs, px);
-		  double epsi = -atan(coeffs[1] + coeffs[2]*2*px + coeffs[3]*3*px*px);
+		  double epsi = psi-atan(coeffs[1] + coeffs[2]*2*px + coeffs[3]*3*px*px);
 		  
 		  //cout << endl;
 		  cout  << "|   epsi " << epsi << " |   cte " << cte  << endl;  //<< "psi " << psi
@@ -154,7 +154,7 @@ int main() {
 		  
 		  
 		  Eigen::VectorXd state(6);
-		  state << px, 0, psi, v, cte, epsi;
+		  state << px, py, psi, v, cte, epsi;
 
 		  std::vector<double> x_vals;
 		  std::vector<double> y_vals;
@@ -177,7 +177,7 @@ int main() {
 		 }	
 		 
 		 
-          double steer_value = vars[0]/deg2rad(25)*-1; //multiply the steering value by -1 before sending it back to the server.
+          double steer_value = vars[0]*-1; //multiply the steering value by -1 before sending it back to the server.
           double throttle_value = vars[1];
 		  //cout << "throttle" << throttle_value << endl;
 	
